@@ -27,6 +27,7 @@
         <quarkus.container-image.insecure>true</quarkus.container-image.insecure>
         <quarkus.container-image.registry>quay.io</quarkus.container-image.registry>
         <quarkus.container-image.group>openshift-knative</quarkus.container-image.group>
+        <testcontainers.version>1.20.1</testcontainers.version>
 
         <!-- needed from tooling/archetypes -->
         <maven-version>3.9.9</maven-version>
@@ -97,6 +98,26 @@
                 <groupId>org.citrusframework</groupId>
                 <artifactId>citrus-http</artifactId>
                 <version>${citrus.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Testcontainers -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>localstack</artifactId>
+                <version>${testcontainers.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
