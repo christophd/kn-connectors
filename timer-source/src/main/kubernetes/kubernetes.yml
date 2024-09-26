@@ -17,17 +17,9 @@ spec:
       - name: kn-connector-timer-source
         env:
           - name: CAMEL_KAMELET_TIMER_SOURCE_MESSAGE
-            value: "{{configmap:kn-source-config/message}}"
+            value: "Hello from timer source!"
           - name: CAMEL_KAMELET_TIMER_SOURCE_PERIOD
-            value: "{{configmap:kn-source-config/period}}"
-        volumeMounts:
-          - mountPath: /etc/camel/conf.d/_configmaps/kn-source-config
-            name: source-config
-            readOnly: true
-      volumes:
-        - configMap:
-            name: kn-source-config
-          name: source-config
+            value: "1000"
 ---
 apiVersion: sources.knative.dev/v1
 kind: SinkBinding

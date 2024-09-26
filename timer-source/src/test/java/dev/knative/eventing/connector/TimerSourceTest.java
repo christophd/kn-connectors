@@ -30,7 +30,7 @@ import static org.citrusframework.http.actions.HttpActionBuilder.http;
 
 @QuarkusTest
 @CitrusSupport
-public class KnConnectorSourceTest {
+public class TimerSourceTest {
 
     @CitrusResource
     private GherkinTestActionRunner tc;

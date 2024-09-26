@@ -23,6 +23,7 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.14.4</quarkus.platform.version>
+        <quarkus.kubernetes-client.generate-rbac>false</quarkus.kubernetes-client.generate-rbac>
         <quarkus.container-image.insecure>true</quarkus.container-image.insecure>
         <quarkus.container-image.registry>quay.io</quarkus.container-image.registry>
         <quarkus.container-image.group>openshift-knative</quarkus.container-image.group>
