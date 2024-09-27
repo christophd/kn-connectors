@@ -53,6 +53,14 @@
       <groupId>org.apache.camel.quarkus</groupId>
       <artifactId>camel-quarkus-aws2-ddb</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.camel.quarkus</groupId>
+      <artifactId>camel-quarkus-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel.quarkus</groupId>
+      <artifactId>camel-quarkus-gson</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.camel.quarkus</groupId>
@@ -95,6 +103,21 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>localstack</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.citrusframework</groupId>
       <artifactId>citrus-quarkus</artifactId>
       <scope>test</scope>
@@ -102,6 +125,11 @@
     <dependency>
       <groupId>org.citrusframework</groupId>
       <artifactId>citrus-http</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.citrusframework</groupId>
+      <artifactId>citrus-validation-json</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
