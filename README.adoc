@@ -2,7 +2,7 @@
 
 Knative eventing connectors based on https://camel.apache.org/camel-kamelets/[Apache Camel Kamelets].
 Each connector project is able to act as a source or sink for the Knative eventing broker.
-The projects create container images that get referenced in a Knative KameletSource/KameletSink custom resource.
+The projects create container images that get referenced in a Knative `IntegrationSource` or `IntegrationSink` custom resource.
 
 == Create new connectors
 
@@ -18,7 +18,7 @@ mvn install -pl :kn-connector-archetype-source
 
 The command creates the Maven archetype artifact on your local machine, so you can use it in the Maven `archetype:generate` command:
 
-NOTE: The Maven archetype `kn-connector-archetype-source` creates a new KameletSource connector. You can do the very same for sinks, too.
+NOTE: The Maven archetype `kn-connector-archetype-source` creates a new IntegrationSource connector. Please use `kn-connector-archetype-sink` to create a new IntegrationSink connector project.
 
 [source,shell]
 ----
@@ -136,45 +136,184 @@ The environment variables that overwrite properties on the Kamelet source follow
 
 * CAMEL_KAMELET_{{KAMELET_NAME}}_{{PROPERTY_NAME}}={{PROPERTY_VALUE}}
 
-The name represents the name of the Kamelet source as defined in the https://camel.apache.org/camel-kamelets/[Kamelet catalog].
+The name represents the name of the Kamelet as defined in the https://camel.apache.org/camel-kamelets/[Kamelet catalog].
 
-You can set the environment variable on the running deployment:
+The environment variables may be set as part of the Kubernetes deployment or as an alternative on the Knative ContainerSource:
+
+[source,yaml]
+----
+apiVersion: sources.knative.dev/v1
+kind: ContainerSource
+metadata:
+  name: kamelet-source
+  namespace: knative-samples
+spec:
+  template:
+    spec:
+      containers:
+        - image: quay.io/openshift-knative/kn-connector-aws-s3-source:1.0
+          name: timer
+          env:
+            - name: CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN
+              value: "arn:aws:s3:::mybucket"
+            - name: CAMEL_KAMELET_AWS_S3_SOURCE_REGION
+              value: "eu-north-1"
+  sink:
+    ref:
+      apiVersion: eventing.knative.dev/v1
+      kind: Broker
+      name: default
+----
+
+You can also set the environment variable on the running deployment:
 
 [source,shell]
 ----
 kubectl set env deployment/kn-connector-{{source-name}} CAMEL_KAMELET_TIMER_SOURCE_MESSAGE="I updated it..."
 ----
 
-=== ConfigMap and Secret
+=== ConfigMap and Secret refs
 
 You may also mount a configmap/secret to overwrite Kamelet properties with values from the configmap/secret resource.
+
+As the Kamelet properties are configured viw environment variables on the ContainerSource you can also use values referencing a configmap or secret.
+
+[source,yaml]
+----
+apiVersion: sources.knative.dev/v1
+kind: ContainerSource
+metadata:
+  name: kamelet-source
+  namespace: knative-samples
+spec:
+  template:
+    spec:
+      containers:
+        - image: quay.io/openshift-knative/kn-connector-aws-s3-source:1.0
+          name: timer
+          env:
+            - name: CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN
+              value: "arn:aws:s3:::mybucket"
+            - name: CAMEL_KAMELET_AWS_S3_SOURCE_REGION
+              value: "eu-north-1"
+            - name: CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: my-secret
+                  key: aws.s3.accessKey
+            - name: CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY
+              valueFrom:
+                secretKeyRef:
+                  name: my-secret
+                  key: aws.s3.secretKey
+  sink:
+    ref:
+      apiVersion: eventing.knative.dev/v1
+      kind: Broker
+      name: default
+----
+
+The example above references a secret called `my-secret` and loads the keys `aws.s3.accessKey` and `aws.s3.secretKey`.
+
+=== ConfigMap/Secret via Apache Camel property function
+
+You can also load and reference the values of the configmap/secret in the environment variables following Apache Camel expressions:
+
+Given a configmap named `my-aw-s3-source-config` in Kubernetes that has two entries:
+
+.my-aw-s3-source-config
+[source,properties]
+----
+region = Knative rocks!
+period = 3000
+----
 
 You can reference the values of the configmap in the environment variables like this:
 
 * CAMEL_KAMELET_TIMER_SOURCE_MESSAGE={{configmap:kn-source-config/message}}
 * CAMEL_KAMELET_TIMER_SOURCE_PERIOD={{configmap:kn-source-config/period}}
 
-The configmap property values follow this general syntax:
+The configmap property function in Apache Camel follows this general syntax:
 
 [source,text]
 ----
 configmap:name/key[:defaultValue]
 ----
 
-The syntax for referencing a secret value in an environment variable is as follows:
+This means you can also set a default value in case the configmap should not be present.
+
+[source,text]
+----
+configmap:kn-source-config/period:5000
+----
+
+The configmap and secret based configuration requires to add a volume and volume-mount configuration to the connector deployment.
+
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timer-source
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: timer-source
+      app.kubernetes.io/version: 1.0-SNAPSHOT
+  template:
+    spec:
+      containers:
+        - image: localhost:5001/openshift-knative/timer-source:1.0-SNAPSHOT
+          imagePullPolicy: Always
+          name: timer-source
+          env:
+            - name: CAMEL_KAMELET_TIMER_SOURCE_MESSAGE
+              value: "{{configmap:kn-source-config/message}}"
+            - name: CAMEL_KAMELET_TIMER_SOURCE_PERIOD
+              value: "{{configmap:kn-source-config/period:1000}}"
+          volumeMounts:
+            - mountPath: /etc/camel/conf.d/_configmaps/kn-source-config
+              name: timer-source-config
+              readOnly: true
+      volumes:
+        - configMap:
+            name: my-timer-source-config
+          name: kn-source-config
+----
+
+Camel is able to resolve the configmap mount path given in the volume mount.
+The mount path is configurable via `application.properties` in the connector project:
+
+* camel.kubernetes-config.mount-path-configmaps=/etc/camel/conf.d/_configmaps/kn-source-config
+* camel.kubernetes-config.mount-path-secrets=/etc/camel/conf.d/_secrets/kn-source-config
+
+The mount path configured on the Kubernetes deployment should match the configuration in the `application.properties`.
+
+Instead of settings the mount paths statically in the `application.properties` you can also set these via environment variables on the
+Kubernetes deployment.
+
+* CAMEL_K_MOUNT_PATH_CONFIGMAPS=/etc/camel/conf.d/_configmaps/kn-source-config
+* CAMEL_K_MOUNT_PATH_SECRETS=/etc/camel/conf.d/_secrets/kn-source-config
+
+The same mechanism applies to mounting and configuring Kubernetes secrets.
+The syntax for referencing a secret value via Apache Camel property function is as follows:
 
 [source,text]
 ----
 secret:name/key[:defaultValue]
 ----
 
-The configmap and secret based configuration requires to add a volume and volume-mount configuration to the connector deployment.
-Please refer to the individual source/sink project documentation for more detailed description on how to use configmaps and secrets as a configuration.
+This means you can overwrite Kamelet properties with the values from the secret like this:
+
+* CAMEL_KAMELET_TIMER_SOURCE_MESSAGE=secret:kn-source-config/msg
+* CAMEL_KAMELET_TIMER_SOURCE_PERIOD=secret:kn-source-config/period
 
 == CloudEvent attributes
 
+== Source attributes
+
 Each connector produces/consumes events in CloudEvent data format.
-The connector source uses a set of default values for the CloudEvent attributes:
+The connector uses a set of default values for the CloudEvent attributes:
 
 * _ce-type_: dev.knative.connector.event.{{source-type}}
 * _ce-source_: dev.knative.eventing.{{source-name}}
@@ -194,6 +333,41 @@ kubectl set env deployment/kn-connector-{{source-name}} KN_CONNECTOR_CE_OVERRIDE
 ----
 
 You may also use the SinkBinding `K_CE_OVERRIDES` environment variable set on the deployment.
+
+=== Sink attributes
+
+Each connector sink consumes events in CloudEvent data format.
+By default, the connector receives all events on the Knative broker.
+
+You may want to specify filters on the CloudEvent attributes so that the connector selectively consumes events from the broker.
+Just configure the Knative trigger to filter based on attributes:
+
+.Knative trigger
+[source,yaml]
+----
+apiVersion: eventing.knative.dev/v1
+kind: Trigger
+metadata:
+  annotations:
+    eventing.knative.dev/creator: kn-connectors
+  labels:
+    eventing.knative.dev/connector: log-sink
+    eventing.knative.dev/broker: default
+  name: kn-connector-log-sink
+spec:
+  broker: default
+  filter:
+    attributes:
+      type: dev.knative.connector.event.timer
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: kn-connector-log-sink
+    uri: /events
+----
+
+The trigger for example filters the events by its type `ce-type=dev.knative.connector.event.timer`.
 
 == Dependencies
 
