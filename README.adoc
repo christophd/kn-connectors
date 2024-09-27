@@ -47,6 +47,20 @@ mvn archetype:generate \
  -Dcomponent-name=aws2-s3
 ----
 
+Each connector requires a set of Camel Quarkus dependencies in the Maven POM.
+After the 1st build of the new Maven project you can review a generated list of dependencies in `target/metadata/dependencies.json`.
+This generated info gives you a list of dependencies that you should consider adding to the Maven project POM.
+
+Also, the metadata folder includes the information about supported Kamelet properties (`target/metadata/properties.json`).
+You may review this list of properties and decide which one of these the IntegrationSource CRD should include in its spec.
+The generated info includes all property specifications such as enumeration constraints or formats.
+
+NOTE: Each connector project generates an AsciiDoc file in its project root folder (`properties.adoc`) which holds a list of all supported Kamelet properties. This includes the environment variable name that you may set as part of a connector deployment in order to overwrite one of these Kamelet properties
+
+NOTE: The connector project contains a generated properties specification (`properties.yaml`) that you can use as a base for adding the connector to the IntegrationSource CRD specification as typed API.
+
+The generation of the info and spec files is done automatically when the connector Maven project is built.
+
 == Build the container image
 
 Each kn-connector project uses Quarkus in combination with Apache Camel, Kamelets and Maven as a build tool.

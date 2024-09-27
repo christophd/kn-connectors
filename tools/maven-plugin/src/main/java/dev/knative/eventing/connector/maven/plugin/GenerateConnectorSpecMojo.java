@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
@@ -90,6 +91,7 @@ public class GenerateConnectorSpecMojo extends AbstractMojo {
 
         generatePropertiesAdoc(kamelet);
         generatePropertiesSpec(kamelet);
+        generateDependenciesSpec(kamelet);
         generatePropertiesCrdSpec(kamelet);
     }
 
@@ -136,8 +138,25 @@ public class GenerateConnectorSpecMojo extends AbstractMojo {
 
     private void generatePropertiesSpec(Kamelet kamelet) throws MojoExecutionException {
         try {
-            Files.writeString(Paths.get(output.getAbsolutePath(), "properties.json"), json().writer().withDefaultPrettyPrinter()
+            Files.createDirectories(Paths.get(output.getAbsolutePath(), "target/metadata"));
+            Files.writeString(Paths.get(output.getAbsolutePath(), "target/metadata/properties.json"), json().writer().withDefaultPrettyPrinter()
                             .writeValueAsString(kamelet.getSpec().getDefinition()),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            throw new MojoExecutionException(e);
+        }
+    }
+
+    private void generateDependenciesSpec(Kamelet kamelet) throws MojoExecutionException {
+        try {
+            Files.createDirectories(Paths.get(output.getAbsolutePath(), "target/metadata"));
+            Files.writeString(Paths.get(output.getAbsolutePath(), "target/metadata/dependencies.json"), json().writer().withDefaultPrettyPrinter()
+                            .writeValueAsString(kamelet.getSpec().getDependencies()
+                                    .stream()
+                                    .filter(it -> !"camel:core".equals(it))
+                                    .filter(it -> !"camel:kamelet".equals(it))
+                                    .filter(it -> !it.contains("org.apache.camel.kamelets:camel-kamelets-utils"))
+                                    .collect(Collectors.toList())),
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             throw new MojoExecutionException(e);
