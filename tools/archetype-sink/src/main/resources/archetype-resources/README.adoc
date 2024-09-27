@@ -1,4 +1,4 @@
-= Knative connector log-sink
+= Knative connector ${kamelet-name}-sink
 
 Knative eventing connector based on https://camel.apache.org/camel-kamelets/[Apache Camel Kamelets].
 The connector project creates a container image that is pushed into a registry so the image can be referenced in a Kubernetes deployment.
@@ -28,7 +28,7 @@ By default, the container image looks like this:
 
 [source,text]
 ----
-quay.io/openshift-knative/kn-connector-log-sink:1.0-SNAPSHOT
+quay.io/openshift-knative/kn-connector-${kamelet-name}-sink:1.0-SNAPSHOT
 ----
 
 The project leverages the Quarkus Kubernetes and container image extensions so you can use Quarkus properties and configurations to customize the resulting container image.
@@ -96,7 +96,7 @@ The Pipe is a YAML file located in link:src/main/resources/camel/kn-connector-si
 apiVersion: camel.apache.org/v1
 kind: Pipe
 metadata:
-  name: kn-connector-log-sink
+  name: kn-connector-${kamelet-name}-sink
 spec:
   source:
     ref:
@@ -109,10 +109,10 @@ spec:
     ref:
       kind: Kamelet
       apiVersion: camel.apache.org/v1
-      name: log-sink
+      name: ${kamelet-name}-sink
 ----
 
-This connector uses the https://camel.apache.org/camel-kamelets/log-sink.html[log-sink] Kamelet and consumes events from the Knative broker.
+This connector uses the https://camel.apache.org/camel-kamelets/${kamelet-name}-sink.html[${kamelet-name}-sink] Kamelet and consumes events from the Knative broker.
 
 The Pipe references a Knative broker as a source and connects to a Kamelet as a sink.
 
@@ -132,16 +132,16 @@ metadata:
   annotations:
     eventing.knative.dev/creator: kn-connectors
   labels:
-    eventing.knative.dev/connector: log-sink
+    eventing.knative.dev/connector: ${kamelet-name}-sink
     eventing.knative.dev/broker: default
-  name: kn-connector-log-sink
+  name: kn-connector-${kamelet-name}-sink
 spec:
   broker: default
   subscriber:
     ref:
       apiVersion: v1
       kind: Service
-      name: kn-connector-log-sink
+      name: kn-connector-${kamelet-name}-sink
     uri: /events
 ----
 
@@ -161,7 +161,7 @@ You can set the environment variable on the running deployment:
 
 [source,shell]
 ----
-kubectl set env deployment/kn-connector-log-sink CAMEL_KAMELET_LOG_SINK_MULTILINE=false
+kubectl set env deployment/kn-connector-${kamelet-name}-sink CAMEL_KAMELET_{{KAMELET_NAME}}_{{PROPERTY_NAME}}="I updated it..."
 ----
 
 The environment variables that overwrite properties on the Kamelet sink follow a naming convention:
@@ -174,19 +174,19 @@ The name represents the name of the Kamelet sink as defined in the https://camel
 
 You may also mount a configmap/secret to overwrite Kamelet properties with values from the configmap/secret resource.
 
-Given a configmap named `my-log-sink-config` in Kubernetes that has two entries:
+Given a configmap named `my-${kamelet-name}-sink-config` in Kubernetes that has two entries:
 
-.my-log-sink-config
+.my-${kamelet-name}-sink-config
 [source,properties]
 ----
-showHeaders=true
-level=DEBUG
+message = Knative rocks!
+period = 3000
 ----
 
 You can reference the values of the configmap in the environment variables like this:
 
-* CAMEL_KAMELET_LOG_SINK_SHOWHEADERS={{configmap:kn-sink-config/showHeaders}}
-* CAMEL_KAMELET_LOG_SINK_LEVEL={{configmap:kn-sink-config/level}}
+* CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE={{configmap:kn-sink-config/message}}
+* CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD={{configmap:kn-sink-config/period}}
 
 The configmap property values follow this general syntax:
 
@@ -199,7 +199,7 @@ This means you can also set a default value in case the configmap should not be 
 
 [source,text]
 ----
-configmap:kn-sink-config/level:INFO
+configmap:kn-sink-config/period:5000
 ----
 
 You can set the environment variables on the Kubernetes deployment for the connector:
@@ -209,23 +209,23 @@ You can set the environment variables on the Kubernetes deployment for the conne
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: log-sink
+  name: ${kamelet-name}-sink
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: log-sink
+      app.kubernetes.io/name: ${kamelet-name}-sink
       app.kubernetes.io/version: 1.0-SNAPSHOT
   template:
     spec:
       containers:
-        - image: localhost:5001/openshift-knative/log-sink:1.0-SNAPSHOT
+        - image: localhost:5001/openshift-knative/${kamelet-name}-sink:1.0-SNAPSHOT
           imagePullPolicy: Always
-          name: log-sink
+          name: ${kamelet-name}-sink
           env:
-            - name: CAMEL_KAMELET_LOG_SINK_SHOWHEADERS
-              value: "{{configmap:kn-sink-config/showHeaders}}"
-            - name: CAMEL_KAMELET_LOG_SINK_LEVEL
-              value: "{{configmap:kn-sink-config/level:INFO}}"
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE
+              value: "{{configmap:kn-sink-config/message}}"
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD
+              value: "{{configmap:kn-sink-config/period:1000}}"
 ----
 
 In order to use the values from the configmap you need to add a volume and a volume mount to the deployment.
@@ -235,30 +235,30 @@ In order to use the values from the configmap you need to add a volume and a vol
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: log-sink
+  name: ${kamelet-name}-sink
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: log-sink
+      app.kubernetes.io/name: ${kamelet-name}-sink
       app.kubernetes.io/version: 1.0-SNAPSHOT
   template:
     spec:
       containers:
-        - image: localhost:5001/openshift-knative/log-sink:1.0-SNAPSHOT
+        - image: localhost:5001/openshift-knative/${kamelet-name}-sink:1.0-SNAPSHOT
           imagePullPolicy: Always
-          name: log-sink
+          name: ${kamelet-name}-sink
           env:
-            - name: CAMEL_KAMELET_LOG_SINK_SHOWHEADERS
-              value: "{{configmap:kn-sink-config/showHeaders}}"
-            - name: CAMEL_KAMELET_LOG_SINK_LEVEL
-              value: "{{configmap:kn-sink-config/level:INFO}}"
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE
+              value: "{{configmap:kn-sink-config/message}}"
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD
+              value: "{{configmap:kn-sink-config/period:1000}}"
           volumeMounts:
             - mountPath: /etc/camel/conf.d/_configmaps/kn-sink-config
               name: kn-sink-config
               readOnly: true
       volumes:
         - configMap:
-            name: my-log-sink-config
+            name: my-${kamelet-name}-sink-config
           name: kn-sink-config
 ----
 
@@ -286,8 +286,8 @@ secret:name/key[:defaultValue]
 
 This means you can overwrite Kamelet properties with the values from the secret like this:
 
-* CAMEL_KAMELET_LOG_SINK_SHOWHEADERS=secret:kn-sink-config/showHeaders
-* CAMEL_KAMELET_LOG_SINK_LEVEL=secret:kn-sink-config/level
+* CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE=secret:kn-sink-config/msg
+* CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD=secret:kn-sink-config/period
 
 == CloudEvent attributes
 
@@ -306,9 +306,9 @@ metadata:
   annotations:
     eventing.knative.dev/creator: kn-connectors
   labels:
-    eventing.knative.dev/connector: log-sink
+    eventing.knative.dev/connector: ${kamelet-name}-sink
     eventing.knative.dev/broker: default
-  name: kn-connector-log-sink
+  name: kn-connector-${kamelet-name}-sink
 spec:
   broker: default
   filter:
@@ -318,7 +318,7 @@ spec:
     ref:
       apiVersion: v1
       kind: Service
-      name: kn-connector-log-sink
+      name: kn-connector-${kamelet-name}-sink
     uri: /events
 ----
 

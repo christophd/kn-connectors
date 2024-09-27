@@ -17,6 +17,7 @@
 
     <modules>
         <module>archetype-source</module>
+        <module>archetype-sink</module>
         <module>maven-plugin</module>
     </modules>
 
